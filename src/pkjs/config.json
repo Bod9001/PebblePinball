@@ -1,0 +1,28 @@
+[
+  {
+    "type": "heading",
+    "defaultValue": "SillyBounce Settings",
+    "size": 1
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Layout Config"
+      },
+      {
+        "type": "input",
+        "messageKey": "layoutConfig",
+        "label": "Layout String",
+        "attributes": {
+          "placeholder": "Paste your layout string here..."
+        }
+      }
+    ]
+  },
+  {
+    "type": "submit",
+    "defaultValue": "Send to Watch"
+  }
+]

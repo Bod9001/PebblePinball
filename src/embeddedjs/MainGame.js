@@ -1,8 +1,7 @@
 import Button from "pebble/button";
 import Poco from "commodetto/Poco";
 
-//TODO Some type of delay things so it doesn't add drag/gravity while it is doing the multiple collision checks
-//TODO Physics is still a bit buggy
+//TODO Physics is still a bit buggy //Has been mitigated a little bit
 
 
 let render = null;
@@ -49,9 +48,6 @@ let ballColor = null;
 let velLineColor = null;
 let bgColor = null;
 
-// ─── Coordinate helpers ──────────────────────────────────────────────────────
-function rx(f) { return f * screen.width; }
-function ry(f) { return f * screen.height; }
 
 // ─── Utility ────────────────────────────────────────────────────────────────
 function clamp(num, min, max) {
@@ -135,8 +131,8 @@ function applyLine(line) {
       ballVY = +v[3];
       ballColor = render.makeColor(+v[4], +v[5], +v[6]);
       ball = {
-        x: rx(ballStartX),
-        y: ry(ballStartY),
+        x: (ballStartX * screen.width),
+        y: (ballStartY * screen.height),
         vx: ballVX,
         vy: ballVY
       };
@@ -145,8 +141,8 @@ function applyLine(line) {
     case "U":
       console.log("U");
       bumpers.push({
-        cx: rx(+v[0]),
-        cy: ry(+v[1]),
+        cx: (+v[0] * screen.width),
+        cy: (+v[1] * screen.height),
         radius: +v[2],
         AddScore: +v[3],
         fillColor: render.makeColor(+v[4], +v[5], +v[6]),
@@ -158,10 +154,10 @@ function applyLine(line) {
     case "W": {
       console.log("W");
       const wall = {
-        x1: rx(+v[0]),
-        y1: ry(+v[1]),
-        x2: rx(+v[2]),
-        y2: ry(+v[3]),
+        x1: (+v[0] * screen.width),
+        y1: (+v[1] * screen.height),
+        x2: (+v[2] * screen.width),
+        y2: (+v[3] * screen.height),
         behavior: v[4] === "bonker" ? 2 : 1,
         color: render.makeColor(+v[5], +v[6], +v[7])
       };
@@ -174,11 +170,11 @@ function applyLine(line) {
       console.log("D");
       const p = {
         side: v[0],
-        px: rx(+v[1]),
-        py: ry(+v[2]),
+        px: (+v[1] * screen.width),
+        py: (+v[2] * screen.height),
         pivotX: +v[1],
         pivotY: +v[2],
-        length: rx(+v[3]),
+        length: (+v[3] * screen.width),
         restAngle: +v[4],
         activeAngle: +v[5],
         angularSpeed: +v[6],
@@ -280,37 +276,9 @@ function sweptPaddleCollision(ball, paddle, prevAngle, nextAngle) {
   ball.vy = (ball.vy - 2 * dot * ny) * physWallBouncy + ty * tipSpeed;
 }
 
-// ─── Game Loop ────────────────────────────────────────────────────────────────
-function gameLoop() {
-  //console.log("MMM?");
-  try {
-    //console.log("kkkkkk?");
-    if (gameOver == false) {
-      // console.log("gameOver == false?");
-      if (PreparingBall == false) {
-       // console.log("PreparingBall == false?");
-        ball.vy *= physFriction;
-        ball.vy += physGravity;
-        ball.vx *= physFriction;
-      } else {
-       // console.log("PreparingBall =e= fals?");
-        if (PreparingBallStarted) {
-          if (PreparingBallStartedPositive) {
-            ball.vy -= physGravity;
-          } else {
-            ball.vy += physGravity;
-          }
-
-          if (PreparingBallStartedPositive && ball.vy < -physMaxLaunch) PreparingBallStartedPositive = false;
-          if (PreparingBallStartedPositive == false && ball.vy > 0) PreparingBallStartedPositive = true;
-        }
-      }
-     //  console.log("A?");
-      ball.vy = clamp(ball.vy, -physMaxSpeed, physMaxSpeed);
-      ball.vx = clamp(ball.vx, -physMaxSpeed, physMaxSpeed);
-     // console.log("df?");
-      
-      for (const paddle of paddles) {
+function Physics()
+{
+    for (const paddle of paddles) {
         //console.log("aaa?");
         const target = paddle.isUp ? paddle.activeAngle : paddle.restAngle;
         if (Math.abs(paddle.angle - target) > 0.01) continue;
@@ -338,14 +306,14 @@ function gameLoop() {
           ny = -ny;
         }
 // console.log("55?");
-        ball.x = closest.x + nx * physBallRadius;
-        ball.y = closest.y + ny * physBallRadius;
+        ball.x = closest.x + nx * physBallRadius * 1.01;
+        ball.y = closest.y + ny * physBallRadius * 1.01;
  //console.log("33?");
         const dot = ball.vx * nx + ball.vy * ny;
         ball.vx = (ball.vx - 2 * dot * nx) * physWallBouncy;
         ball.vy = (ball.vy - 2 * dot * ny) * physWallBouncy;
         // console.log("22?");
-        return; //so, it can recalculate the collisions with all the new movement
+        return true; //so, it can recalculate the collisions with all the new movement
       }
       //console.log("walls?");
       for (const wall of walls) {
@@ -377,7 +345,7 @@ function gameLoop() {
           ball.vx += nx * wall.BonkerMagnitude;
           ball.vy += ny * wall.BonkerMagnitude;
         }
-        return; //so, it can recalculate the collisions with all the new movement
+        return true; //so, it can recalculate the collisions with all the new movement
       }
       //console.log("bumper?");
       for (const bumper of bumpers) {
@@ -391,15 +359,17 @@ function gameLoop() {
 
           ball.vx -= 2 * dot * nx;
           ball.vy -= 2 * dot * ny;
-          ball.vx *= 1.4;
-          ball.vy *= 1.4;
-
+          ball.vx += nx * bumper.Strength;
+          ball.vy += ny * bumper.Strength;
+          
           ball.x += nx * (min - dist) * 1.01;
           ball.y += ny * (min - dist) * 1.01;
           Score += bumper.AddScore;
-          return; //so, it can recalculate the collisions with all the new movement
+          return true; //so, it can recalculate the collisions with all the new movement
         }
       }
+
+  
       //console.log("paddle?");
       for (const paddle of paddles) {
         const prevAngle = paddle.angle;
@@ -423,6 +393,43 @@ function gameLoop() {
         }
          //console.log("end?");
       }
+  return false;
+}
+// ─── Game Loop ────────────────────────────────────────────────────────────────
+function gameLoop() {
+  //console.log("MMM?");
+  try {
+    //console.log("kkkkkk?");
+    if (gameOver == false) {
+      // console.log("gameOver == false?");
+      if (PreparingBall == false) {
+       // console.log("PreparingBall == false?");
+        ball.vy *= physFriction;
+        ball.vy += physGravity;
+        ball.vx *= physFriction;
+      } else if (PreparingBall) {
+       // console.log("PreparingBall =e= fals?");
+        if (PreparingBallStarted) {
+          if (PreparingBallStartedPositive) {
+            ball.vy -= physGravity;
+          } else {
+            ball.vy += physGravity;
+          }
+
+          if (PreparingBallStartedPositive && ball.vy < -physMaxLaunch) PreparingBallStartedPositive = false;
+          if (PreparingBallStartedPositive == false && ball.vy > 0) PreparingBallStartedPositive = true;
+        }
+      }
+
+     //  console.log("A?");
+      ball.vy = clamp(ball.vy, -physMaxSpeed, physMaxSpeed);
+      ball.vx = clamp(ball.vx, -physMaxSpeed, physMaxSpeed);
+     // console.log("df?");
+      let i = 0;
+      while(Physics() && 5 > i){
+        i++;
+      }
+    
         //console.log("endPreparingBall");
       if (PreparingBall == false) {
         ball.x += ball.vx;
@@ -479,8 +486,8 @@ function gameLoop() {
     );
     
     if (gameOver || NewHighScore) {
-      const hx = rx(hsX) - (hsW >> 1);
-      const hy = ry(hsY) - (hsH >> 1);
+      const hx = (hsX * screen.width) - (hsW >> 1);
+      const hy = (hsY * screen.height) - (hsH >> 1);
       render.drawText(
         NewHighScore ? hsText : hsFailText + HighScore,
         hsFont,
@@ -496,8 +503,8 @@ function gameLoop() {
     render.drawLine(ball.x, ball.y, ball.x + ball.vx, ball.y + ball.vy, velLineColor, 3);
   
     if (gameOver) {
-      const gx = rx(goX) - (goW >> 1);
-      const gy = ry(goY) - (goH >> 1);
+      const gx = (goX * screen.width) - (goW >> 1);
+      const gy = (goY* screen.height) - (goH >> 1);
       render.drawText(goText, goFont, goColor, gx, gy, goW, goH);
     }
   
@@ -527,7 +534,7 @@ export const GameStarter = {
     PreparingBallStarted = false;
     PreparingBallStartedPositive = true;
 
-    if (name === "[Default]") {
+  if (name === "[Default]") {
       console.log("AAAAAAAAA");
 
       let line;
@@ -535,7 +542,7 @@ export const GameStarter = {
       line = "N SillyBounce"; //map name
       applyLine(line);
 
-      line = "P 6,0.35,0.995,0.8,50,50"; //ballRadius,gravity,friction,wallBouncy, maxSpeed, maxLaunch    //Physic settings
+      line = "P 6,0.35,0.995,0.8,10,10"; //ballRadius,gravity,friction,wallBouncy, maxSpeed, maxLaunch    //Physic settings
       applyLine(line);
 
       line = "S 2,2,40,16,Bitham-Black,30,255,85,170,85,255,255"; //x,y,Width, height, font, fontSize, R,G,B (Normal Colour),R,G,B (High score Colour),  //score Text location
@@ -553,41 +560,48 @@ export const GameStarter = {
       line = "B 0.94,0.30,0,0,255,0,85"; // startX, startY, vx (Technically overrridden), vy  (Technically overrridden), r,g,b  //ball
       applyLine(line);
 
-      line = "U 0.3,0.3,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Left cluster bumper
+      line = "U 0.3,0.3,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Left cluster bumper
       applyLine(line);
 
-      line = "U 0.5,0.25,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Middle cluster bumper
+      line = "U 0.5,0.25,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Middle cluster bumper
       applyLine(line);
 
-      line = "U 0.7,0.3,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top right cluster bumper
+      line = "U 0.7,0.3,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top right cluster bumper
       applyLine(line);
 
-      line = "U 0.4,0.45,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom Left cluster bumper
+      line = "U 0.4,0.45,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom Left cluster bumper
       applyLine(line);
 
-      line = "U 0.6,0.45,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right cluster bumper
+      line = "U 0.6,0.45,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right cluster bumper
       applyLine(line);
 
-      line = "U 0.2,0.2,6,500,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right hard access bumper
+      line = "U 0.18,0.18,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right hard access bumper
       applyLine(line);
 
-      line = "U 0.08,0.07,6,500,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top left hard access bumper
+      line = "U 0.08,0.07,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top left hard access bumper
       applyLine(line);
 
+      line = "U 0.075,0.265,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom left hard access bumper
+      applyLine(line);
+  
+      line = "W -0.9,0.3,0.25,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left slope Paddle //These need to come first so when it does hit collisions it does the Slope wall first
+      applyLine(line);
+
+      line = "W 1.9,0.3,0.75,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right slope Paddle //These need to come first so when it does hit collisions it does the Slope wall first
+      applyLine(line);
+  
+      line = "W 0.9,0.0,0.99,0.15,wall,255,255,255";   //x1, y1, x2, y2, behavior, r,g,b  //Right ball shoot Corner piece
+      applyLine(line);
+  
       line = "W -0.2,0.001,1.2,0.001,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //top wall
       applyLine(line);
 
-      line = "W 0.001,-0.2,0.001,1.2,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left wall
+      line = "W 0.001,-0.2,0.001,0.758,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left wall
       applyLine(line);
 
-      line = "W 0.999,-0.2,0.999,1.2,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right wall
+      line = "W 0.999,-0.2,0.999,0.758,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right wall
       applyLine(line);
 
-      line = "W -0.2,0.65,0.25,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left slope Paddle
-      applyLine(line);
-
-      line = "W 1.2,0.65,0.75,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right slope Paddle
-      applyLine(line);
 
       line = "W 0.10,0.6,0.25,0.75,bonker,255,170,0,3";  //x1, y1, x2, y2, behavior, r,g,b //Left bonker 
       applyLine(line);
@@ -604,13 +618,11 @@ export const GameStarter = {
       line = "W 0.35,0.1,0.1,0.4,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b  //Topless bunker wall left
       applyLine(line);
 
-      line = "W 0.9,0.0,0.99,0.15,wall,255,255,255";   //x1, y1, x2, y2, behavior, r,g,b  //Right ball shoot Corner piece
+
+      line = "D left,0.25,0.9,0.2,0.45,-0.45,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle left
       applyLine(line);
 
-      line = "D left,0.25,0.9,0.5,0.45,-0.45,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle left
-      applyLine(line);
-
-      line = "D right,0.75,0.9,0.5,2.6916,3.5832,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle Right
+      line = "D right,0.75,0.9,0.2,2.6916,3.5832,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle Right  // do Length 0.5 For debugging
       applyLine(line);
 
       line = "V 0,255,0"; //r,g,b // Velocity line colour
@@ -662,8 +674,8 @@ export const GameStarter = {
             if (gameOver && down) {
               Score = 0;
               gameOver = false;
-              ball.x = rx(ballStartX);
-              ball.y = ry(ballStartY);
+              ball.x = (ballStartX * screen.width);
+              ball.y = (ballStartY * screen.height);
               ball.vx = ballVX;
               ball.vy = ballVY;
               PreparingBall = true;
