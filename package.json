@@ -1,0 +1,29 @@
+{
+    "author": "Bod9001",
+    "dependencies": {},
+    "keywords": [
+        "pebble-app"
+    ],
+    "name": "pinball",
+    "pebble": {
+        "displayName": "Pinball",
+        "enableMultiJS": true,
+        "messageKeys": [
+            "dummy"
+        ],
+        "projectType": "moddable",
+        "resources": {
+            "media": []
+        },
+        "sdkVersion": "3",
+        "targetPlatforms": [
+            "emery",
+            "gabbro"
+        ],
+        "uuid": "97596a1e-3ef9-41ea-9852-d57326735b91",
+        "watchapp": {
+            "watchface": false
+        }
+    },
+    "version": "0.1.0"
+}
