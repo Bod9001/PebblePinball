@@ -6,10 +6,13 @@
     ],
     "name": "pinball",
     "pebble": {
+        "capabilities": [
+            "configurable"
+        ],
         "displayName": "Pinball",
         "enableMultiJS": true,
         "messageKeys": [
-            "dummy"
+            "layoutConfig"
         ],
         "projectType": "moddable",
         "resources": {
@@ -20,10 +23,10 @@
             "emery",
             "gabbro"
         ],
-        "uuid": "97596a1e-3ef9-41ea-9852-d57326735b91",
+        "uuid": "9deaf3af-70bb-422b-9a3f-96cbb0351ab0",
         "watchapp": {
             "watchface": false
         }
     },
-    "version": "0.1.0"
+    "version": "0.8.0"
 }

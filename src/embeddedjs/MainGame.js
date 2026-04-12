@@ -1,6 +1,10 @@
 import Button from "pebble/button";
 import Poco from "commodetto/Poco";
 
+//TODO Some type of delay things so it doesn't add drag/gravity while it is doing the multiple collision checks
+//TODO Physics is still a bit buggy
+
+
 let render = null;
 
 // ─── Game State ───────────────────────────────────────────────────────────────
@@ -341,6 +345,7 @@ function gameLoop() {
         ball.vx = (ball.vx - 2 * dot * nx) * physWallBouncy;
         ball.vy = (ball.vy - 2 * dot * ny) * physWallBouncy;
         // console.log("22?");
+        return; //so, it can recalculate the collisions with all the new movement
       }
       //console.log("walls?");
       for (const wall of walls) {
@@ -359,8 +364,10 @@ function gameLoop() {
           ny = -ny;
         }
 
-        ball.x = closest.x;
-        ball.y = closest.y;
+        ball.x = closest.x + nx * 1.01;
+        ball.y = closest.y + ny  * 1.01;
+        //ball.x = closest.x;
+        //ball.y = closest.y;
 
         const dot = ball.vx * nx + ball.vy * ny;
         ball.vx = (ball.vx - 2 * dot * nx) * physWallBouncy;
@@ -370,6 +377,7 @@ function gameLoop() {
           ball.vx += nx * wall.BonkerMagnitude;
           ball.vy += ny * wall.BonkerMagnitude;
         }
+        return; //so, it can recalculate the collisions with all the new movement
       }
       //console.log("bumper?");
       for (const bumper of bumpers) {
@@ -386,9 +394,10 @@ function gameLoop() {
           ball.vx *= 1.4;
           ball.vy *= 1.4;
 
-          ball.x += nx * (min - dist);
-          ball.y += ny * (min - dist);
+          ball.x += nx * (min - dist) * 1.01;
+          ball.y += ny * (min - dist) * 1.01;
           Score += bumper.AddScore;
+          return; //so, it can recalculate the collisions with all the new movement
         }
       }
       //console.log("paddle?");
@@ -523,88 +532,88 @@ export const GameStarter = {
 
       let line;
 
-      line = "N SillyBounce";
+      line = "N SillyBounce"; //map name
       applyLine(line);
 
-      line = "P 6,0.35,0.995,0.8,10,10";
+      line = "P 6,0.35,0.995,0.8,50,50"; //ballRadius,gravity,friction,wallBouncy, maxSpeed, maxLaunch    //Physic settings
       applyLine(line);
 
-      line = "S 2,2,40,16,Bitham-Black,30,255,85,170,85,255,255";
+      line = "S 2,2,40,16,Bitham-Black,30,255,85,170,85,255,255"; //x,y,Width, height, font, fontSize, R,G,B (Normal Colour),R,G,B (High score Colour),  //score Text location
       applyLine(line);
 
-      line = "G GAME OVER,0.43,0.5,160,40,Bitham-Black,30,255,255,255";
+      line = "G GAME OVER,0.43,0.5,160,40,Bitham-Black,30,255,255,255"; //gameOverText, x,y,Width, height, font, fontSize, R,G,B //High Score text
       applyLine(line);
 
-      line = "H NEW\\nHIGH SCORE,HIGH SCORE\\n,0.46,0.68,180,60,Bitham-Black,30,85,255,255";
+      line = "H NEW\\nHIGH SCORE,HIGH SCORE\\n,0.46,0.68,180,60,Bitham-Black,30,85,255,255"; //highScoreText, Fail highScoreText, x,y,Width, height, font, fontSize, R,G,B //High Score text
       applyLine(line);
 
-      line = "K 85,0,85"; 
+      line = "K 85,0,85";  //R,G,B //Background colour
+      applyLine(line); 
+  
+      line = "B 0.94,0.30,0,0,255,0,85"; // startX, startY, vx (Technically overrridden), vy  (Technically overrridden), r,g,b  //ball
       applyLine(line);
 
-      line = "B 0.94,0.30,0,0,255,0,85";
+      line = "U 0.3,0.3,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Left cluster bumper
       applyLine(line);
 
-      line = "U 0.3,0.3,8,50,0,0,170,0,170,255,1.3";
+      line = "U 0.5,0.25,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Middle cluster bumper
       applyLine(line);
 
-      line = "U 0.5,0.25,8,50,0,0,170,0,170,255,1.3";
+      line = "U 0.7,0.3,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top right cluster bumper
       applyLine(line);
 
-      line = "U 0.7,0.3,8,50,0,0,170,0,170,255,1.3";
+      line = "U 0.4,0.45,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom Left cluster bumper
       applyLine(line);
 
-      line = "U 0.4,0.45,8,50,0,0,170,0,170,255,1.3";
+      line = "U 0.6,0.45,8,50,0,0,170,0,170,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right cluster bumper
       applyLine(line);
 
-      line = "U 0.6,0.45,8,50,0,0,170,0,170,255,1.3";
+      line = "U 0.2,0.2,6,500,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right hard access bumper
       applyLine(line);
 
-      line = "U 0.2,0.2,6,500,170,0,170,255,85,255,1.1";
+      line = "U 0.08,0.07,6,500,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top left hard access bumper
       applyLine(line);
 
-      line = "U 0.08,0.07,6,500,170,0,170,255,85,255,1.1";
+      line = "W -0.2,0.001,1.2,0.001,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //top wall
       applyLine(line);
 
-      line = "W -0.2,0.001,1.2,0.001,wall,255,255,255";
+      line = "W 0.001,-0.2,0.001,1.2,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left wall
       applyLine(line);
 
-      line = "W 0.001,-0.2,0.001,1.2,wall,255,255,255";
+      line = "W 0.999,-0.2,0.999,1.2,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right wall
       applyLine(line);
 
-      line = "W 0.999,-0.2,0.999,1.2,wall,255,255,255";
+      line = "W -0.2,0.65,0.25,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left slope Paddle
       applyLine(line);
 
-      line = "W -0.2,0.65,0.25,0.9,wall,255,255,255";
+      line = "W 1.2,0.65,0.75,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right slope Paddle
       applyLine(line);
 
-      line = "W 1.2,0.65,0.75,0.9,wall,255,255,255";
+      line = "W 0.10,0.6,0.25,0.75,bonker,255,170,0,3";  //x1, y1, x2, y2, behavior, r,g,b //Left bonker 
       applyLine(line);
 
-      line = "W 0.10,0.6,0.25,0.75,bonker,255,170,0,3";
+      line = "W 0.1,0.6,0.1,0.75,wall,255,255,255";  //x1, y1, x2, y2, behavior, r,g,b //Left bonker back
       applyLine(line);
 
-      line = "W 0.1,0.6,0.1,0.75,wall,255,255,255";
+      line = "W 0.9,0.6,0.75,0.75,bonker,255,170,0,3"; //x1, y1, x2, y2, behavior, r,g,b //Right bonker 
       applyLine(line);
 
-      line = "W 0.9,0.6,0.75,0.75,bonker,255,170,0,3";
+      line = "W 0.9,0.13,0.9,0.80,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b  //Right ball shoot /Right bonker back
       applyLine(line);
 
-      line = "W 0.9,0.13,0.9,0.80,wall,255,255,255";
+      line = "W 0.35,0.1,0.1,0.4,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b  //Topless bunker wall left
       applyLine(line);
 
-      line = "W 0.35,0.1,0.1,0.4,wall,255,255,255";
+      line = "W 0.9,0.0,0.99,0.15,wall,255,255,255";   //x1, y1, x2, y2, behavior, r,g,b  //Right ball shoot Corner piece
       applyLine(line);
 
-      line = "W 0.9,0.0,0.99,0.15,wall,255,255,255";
+      line = "D left,0.25,0.9,0.5,0.45,-0.45,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle left
       applyLine(line);
 
-      line = "D left,0.25,0.9,0.2,0.45,-0.45,0.3,0,255,0";
+      line = "D right,0.75,0.9,0.5,2.6916,3.5832,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle Right
       applyLine(line);
 
-      line = "D right,0.75,0.9,0.2,2.6916,3.5832,0.3,0,255,0";
-      applyLine(line);
-
-      line = "V 0,255,0";
+      line = "V 0,255,0"; //r,g,b // Velocity line colour
       applyLine(line);
     } else {
       const CHUNK_SIZE = 500;
