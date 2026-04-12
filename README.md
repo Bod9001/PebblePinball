@@ -93,6 +93,8 @@ This is an example of a raw map, Here it is now with some comments to help show 
      
       V 0,255,0"; //r,g,b // Velocity line colour
 
+      Q 0.95,0.50,6,100,170,  0,  0,255, 0, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Middle right pressure plate Psion
+
 Good way to look at it is
 
 V = Velocity line colour
@@ -114,5 +116,7 @@ S = Current Score text
 P = Physics settings
 
 N = Map name
+
+Q = Pressure plate
 
 Note: AI was partially used to help write the Application
