@@ -200,14 +200,8 @@
         }
 
         @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         .info-box {
@@ -225,34 +219,13 @@
         }
 
         @media (max-width: 480px) {
-            body {
-                padding: 15px;
-            }
-
-            .section {
-                padding: 20px;
-            }
-
-            h1 {
-                font-size: 24px;
-            }
-
-            .file-upload-area {
-                padding: 30px 15px;
-            }
-
-            .upload-icon {
-                font-size: 36px;
-            }
-
-            button {
-                padding: 12px 16px;
-                font-size: 14px;
-            }
-
-            .button-group {
-                flex-direction: column;
-            }
+            body { padding: 15px; }
+            .section { padding: 20px; }
+            h1 { font-size: 24px; }
+            .file-upload-area { padding: 30px 15px; }
+            .upload-icon { font-size: 36px; }
+            button { padding: 12px 16px; font-size: 14px; }
+            .button-group { flex-direction: column; }
         }
     </style>
 </head>
@@ -266,11 +239,11 @@
         <div class="section">
             <div class="file-upload-area" id="dropZone">
                 <div class="upload-icon">📁</div>
-                <div class="upload-text">Select or drag JSON file</div>
-                <div class="upload-subtext">Upload a custom LAYOUT configuration</div>
+                <div class="upload-text">Select or drag layout file</div>
+                <div class="upload-subtext">Upload a .txt layout or legacy .json config</div>
             </div>
 
-            <input type="file" id="fileInput" accept=".json" />
+            <input type="file" id="fileInput" accept=".txt,.json" />
 
             <div class="file-name" id="fileName">
                 <span class="file-name-text" id="fileNameText"></span>
@@ -284,8 +257,9 @@
             </div>
 
             <div class="info-box">
-                <strong>Expected JSON format:</strong><br>
-                Your JSON should contain the LAYOUT configuration with physics, backgroundColor, ball, score, etc.
+                <strong>Accepted formats:</strong><br>
+                <strong>.txt</strong> — new line-based layout format (N, P, S, G, H, K, B, U, W, D, V lines)<br>
+                <strong>.json</strong> — legacy JSON layout, will be auto-converted
             </div>
         </div>
     </div>
@@ -299,113 +273,129 @@
         const clearBtn = document.getElementById('clearBtn');
         const statusMessage = document.getElementById('statusMessage');
 
-        let selectedFile = null;
         let parsedConfig = null;
 
-        // Click to select file
-        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('click', function() { fileInput.click(); });
 
-        // File input change
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', function(e) {
             handleFileSelect(e.target.files[0]);
         });
 
-        // Drag and drop
-        dropZone.addEventListener('dragover', (e) => {
+        dropZone.addEventListener('dragover', function(e) {
             e.preventDefault();
             dropZone.classList.add('dragover');
         });
 
-        dropZone.addEventListener('dragleave', () => {
+        dropZone.addEventListener('dragleave', function() {
             dropZone.classList.remove('dragover');
         });
 
-        dropZone.addEventListener('drop', (e) => {
+        dropZone.addEventListener('drop', function(e) {
             e.preventDefault();
             dropZone.classList.remove('dragover');
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFileSelect(files[0]);
+            if (e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
             }
         });
 
         function handleFileSelect(file) {
-            if (!file) return;
+            if (file == null) return;
 
-            if (!file.name.endsWith('.json')) {
-                showStatus('❌ Please select a .json file', 'error');
+            if (file.name.endsWith('.txt') == false && file.name.endsWith('.json') == false) {
+                showStatus('❌ Please select a .txt or .json file', 'error');
                 return;
             }
 
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = function(e) {
                 try {
-                    const json = JSON.parse(e.target.result);
-                    
-                    // Basic validation
-                    if (!json || typeof json !== 'object') {
-                        throw new Error('Invalid JSON structure');
+                    let configString;
+
+                    if (file.name.endsWith('.json')) {
+                        const json = JSON.parse(e.target.result);
+                        configString = convertJsonToLineFormat(json);
+                    } else {
+                        configString = e.target.result;
                     }
 
-                    parsedConfig = json;
-                    selectedFile = file;
-                    
-                    fileNameText.textContent = `✓ ${file.name}`;
+                    // Must have an N line
+                    const hasName = configString.split('\n').find(function(l) { return l.startsWith('N '); });
+                    if (hasName == null) {
+                        throw new Error('Missing layout name (N line)');
+                    }
+
+                    // Size check
+                    if (configString.length > 8000) {
+                        throw new Error('Config too large (max 8KB)');
+                    }
+
+                    parsedConfig = configString;
+
+                    fileNameText.textContent = '✓ ' + file.name;
                     fileNameEl.classList.add('active');
                     sendBtn.disabled = false;
                     clearBtn.disabled = false;
-                    
-                    showStatus(`✓ Loaded: ${file.name}`, 'success');
+
+                    showStatus('✓ Loaded: ' + file.name, 'success');
                 } catch (error) {
-                    showStatus(`❌ Invalid JSON: ${error.message}`, 'error');
-                    selectedFile = null;
+                    showStatus('❌ ' + error.message, 'error');
                     parsedConfig = null;
                 }
             };
 
-            reader.onerror = () => {
+            reader.onerror = function() {
                 showStatus('❌ Error reading file', 'error');
             };
 
             reader.readAsText(file);
         }
 
+        function convertJsonToLineFormat(json) {
+            const lines = [];
+            lines.push('N ' + json.name);
+            const p = json.physics;
+            lines.push('P ' + p.ballRadius + ',' + p.gravity + ',' + p.friction + ',' + p.wallBouncy + ',' + p.maxSpeed + ',' + p.maxLaunch);
+            const s = json.score;
+            lines.push('S ' + s.x + ',' + s.y + ',' + s.w + ',' + s.h + ',' + s.font + ',' + s.fontSize + ',' + s.color.r + ',' + s.color.g + ',' + s.color.b + ',' + s.colorHighScore.r + ',' + s.colorHighScore.g + ',' + s.colorHighScore.b);
+            const g = json.gameOverText;
+            lines.push('G ' + g.text + ',' + g.x + ',' + g.y + ',' + g.w + ',' + g.h + ',' + g.font + ',' + g.fontSize + ',' + g.color.r + ',' + g.color.g + ',' + g.color.b);
+            const h = json.highScoreText;
+            lines.push('H ' + h.text + ',' + h.Failtext + ',' + h.x + ',' + h.y + ',' + h.w + ',' + h.h + ',' + h.font + ',' + h.fontSize + ',' + h.color.r + ',' + h.color.g + ',' + h.color.b);
+            const bg = json.backgroundColor;
+            lines.push('K ' + bg.r + ',' + bg.g + ',' + bg.b);
+            const b = json.ball;
+            lines.push('B ' + b.startX + ',' + b.startY + ',' + b.vx + ',' + b.vy + ',' + b.color.r + ',' + b.color.g + ',' + b.color.b);
+            for (let i = 0; i < json.bumpers.length; i++) {
+                const u = json.bumpers[i];
+                lines.push('U ' + u.cx + ',' + u.cy + ',' + u.radius + ',' + u.AddScore + ',' + u.fillColor.r + ',' + u.fillColor.g + ',' + u.fillColor.b + ',' + u.ringColor.r + ',' + u.ringColor.g + ',' + u.ringColor.b + ',' + u.Strength);
+            }
+            for (let i = 0; i < json.walls.length; i++) {
+                const w = json.walls[i];
+                if (w.behavior === 'bonker') {
+                    lines.push('W ' + w.x1 + ',' + w.y1 + ',' + w.x2 + ',' + w.y2 + ',bonker,' + w.color.r + ',' + w.color.g + ',' + w.color.b + ',' + w.BonkerMagnitude);
+                } else {
+                    lines.push('W ' + w.x1 + ',' + w.y1 + ',' + w.x2 + ',' + w.y2 + ',wall,' + w.color.r + ',' + w.color.g + ',' + w.color.b);
+                }
+            }
+            for (let i = 0; i < json.paddles.length; i++) {
+                const d = json.paddles[i];
+                lines.push('D ' + d.side + ',' + d.pivotX + ',' + d.pivotY + ',' + d.length + ',' + d.restAngle + ',' + d.activeAngle + ',' + d.angularSpeed + ',' + d.color.r + ',' + d.color.g + ',' + d.color.b);
+            }
+            const v = json.velocityLineColor;
+            lines.push('V ' + v.r + ',' + v.g + ',' + v.b);
+            return lines.join('\n');
+        }
+
         function sendToWatch() {
-            if (!parsedConfig) {
+            if (parsedConfig == null) {
                 showStatus('❌ No config loaded', 'error');
                 return;
             }
-
-            try {
-                const configJson = JSON.stringify(parsedConfig);
-
-                // Check size limit
-                if (configJson.length > 8000) {
-                    showStatus('❌ Config too large (max 8KB)', 'error');
-                    return;
-                }
-
-                if (typeof Pebble !== 'undefined') {
-                    Pebble.sendAppMessage(
-                        { layoutConfig: configJson },
-                        () => {
-                            showStatus(`✓ Sent to watch! (${(configJson.length / 1024).toFixed(1)}KB)`, 'success');
-                        },
-                        (error) => {
-                            showStatus(`❌ Send failed: ${error}`, 'error');
-                        }
-                    );
-                } else {
-                    showStatus('✓ Config ready (Pebble API not available for testing)', 'info');
-                    console.log('Config to send:', parsedConfig);
-                }
-            } catch (error) {
-                showStatus(`❌ Error: ${error.message}`, 'error');
-            }
+            showStatus('📤 Sending...', 'info');
+            document.location = 'pebblejs://close#' + encodeURIComponent(parsedConfig);
         }
 
         function clearSelection() {
-            selectedFile = null;
             parsedConfig = null;
             fileInput.value = '';
             fileNameEl.classList.remove('active');
@@ -416,8 +406,9 @@
 
         function showStatus(message, type) {
             statusMessage.textContent = message;
-            statusMessage.className = `status-message ${type}`;
-            setTimeout(() => {
+            statusMessage.className = 'status-message ' + type;
+            if (type === 'info') return;
+            setTimeout(function() {
                 statusMessage.className = 'status-message';
             }, 4000);
         }
