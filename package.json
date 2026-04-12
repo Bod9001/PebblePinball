@@ -1,6 +1,8 @@
 {
     "author": "Bod9001",
-    "dependencies": {},
+    "dependencies": {
+        "@rebble/clay": "^1.0.8"
+    },
     "keywords": [
         "pebble-app"
     ],

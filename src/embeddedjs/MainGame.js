@@ -2,6 +2,8 @@ import Button from "pebble/button";
 import Poco from "commodetto/Poco";
 
 //TODO Physics is still a bit buggy //Has been mitigated a little bit
+//TODO hummm, New functionality for type, e.g Ball teleport, Extra balls?, Spinney Images ( as it spins vertically ), Score walls, Score spots
+//TODO Flashing graphics??, Memory concerns
 
 
 let render = null;
@@ -10,6 +12,7 @@ let render = null;
 let bumpers = [];
 let walls = [];
 let paddles = [];
+let PressurePlates = [];
 let ball = null;
 
 let gameOver = false;
@@ -151,6 +154,20 @@ function applyLine(line) {
       });
       break;
 
+    case "Q":
+      console.log("Q");
+      PressurePlates.push({
+        cx: (+v[0] * screen.width),
+        cy: (+v[1] * screen.height),
+        radius: +v[2],
+        AddScore: +v[3],
+        fillColor: render.makeColor(+v[4], +v[5], +v[6]),
+        ActiveColour: render.makeColor(+v[7], +v[8], +v[9]),
+        Active: false
+      });
+      break; 
+      
+      
     case "W": {
       console.log("W");
       const wall = {
@@ -369,6 +386,21 @@ function Physics()
         }
       }
 
+      for (const PressurePlate of PressurePlates) {
+        const dx = ball.x - PressurePlate.cx, dy = ball.y - PressurePlate.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const min = physBallRadius + PressurePlate.radius;
+
+        if (dist < min && dist > 0) {
+          if (PressurePlate.Active == false){
+            PressurePlate.Active = true;
+            Score += PressurePlate.AddScore;
+          }
+        }
+        else{
+          PressurePlate.Active = false;
+        }
+      }
   
       //console.log("paddle?");
       for (const paddle of paddles) {
@@ -463,6 +495,16 @@ function gameLoop() {
       );
     }
   
+    for (const b of PressurePlates) {
+      if (b.Active){
+        render.drawCircle(b.ActiveColour, Math.round(b.cx), Math.round(b.cy), b.radius, 0, 360);
+      }
+      else{
+        render.drawCircle(b.fillColor, Math.round(b.cx), Math.round(b.cy), b.radius, 0, 360);
+      }
+    }
+    
+    
     for (const b of bumpers) {
       render.drawCircle(b.ringColor, Math.round(b.cx), Math.round(b.cy), b.radius + 2, 0, 360);
       render.drawCircle(b.fillColor, Math.round(b.cx), Math.round(b.cy), b.radius, 0, 360);
@@ -582,6 +624,15 @@ export const GameStarter = {
       applyLine(line);
 
       line = "U 0.075,0.265,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom left hard access bumper
+      applyLine(line);
+  
+      line = "Q 0.95,0.60,6,50,85,  85,  0,255, 255, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Bottom right pressure plate Yellow
+      applyLine(line);
+  
+      line = "Q 0.95,0.50,6,100,170,  0,  0,255, 0, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Middle right pressure plate Psion
+      applyLine(line);
+  
+      line = "Q 0.95,0.40,6,50,85,  85,  0,255, 255, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Top right pressure plate Yellow
       applyLine(line);
   
       line = "W -0.9,0.3,0.25,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left slope Paddle //These need to come first so when it does hit collisions it does the Slope wall first
