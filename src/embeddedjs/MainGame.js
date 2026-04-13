@@ -13,6 +13,7 @@ let bumpers = [];
 let walls = [];
 let paddles = [];
 let PressurePlates = [];
+let Teleports = [];
 let ball = null;
 
 let gameOver = false;
@@ -167,6 +168,20 @@ function applyLine(line) {
       });
       break; 
       
+     case "T":
+      console.log("T");
+      Teleports.push({
+        cx: (+v[0] * screen.width),
+        cy: (+v[1] * screen.height),
+        radius: +v[2],
+        LinkID: +v[3],
+        fillColor: render.makeColor(+v[4], +v[5], +v[6]),
+        RingsColour: render.makeColor(+v[7], +v[8], +v[9]),
+        ExitballVX: +v[10],
+        ExitballVY: +v[11],
+        Active: true
+      });
+      break;   
       
     case "W": {
       console.log("W");
@@ -295,6 +310,31 @@ function sweptPaddleCollision(ball, paddle, prevAngle, nextAngle) {
 
 function Physics()
 {
+      let i = -1;
+      for (const Teleport of Teleports) {
+        i = i + 1;
+        const dx = ball.x - Teleport.cx, dy = ball.y - Teleport.cy;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const min = physBallRadius + Teleport.radius;
+
+        if (dist < min && dist > 0) {
+          if (Teleport.Active == false) continue;
+          if (Teleport.LinkID != i){
+            ball.x = Teleports[Teleport.LinkID].cx;
+            ball.y = Teleports[Teleport.LinkID].cy;
+            ball.vx = Teleports[Teleport.LinkID].ExitballVX;
+            ball.vy = Teleports[Teleport.LinkID].ExitballVY;
+            Teleports[Teleport.LinkID].Active = false;
+            return true;
+          }
+        }
+        else{
+          if (Teleport.Active == false){
+            Teleport.Active = true;
+          }
+        }
+      }
+  
     for (const paddle of paddles) {
         //console.log("aaa?");
         const target = paddle.isUp ? paddle.activeAngle : paddle.restAngle;
@@ -494,6 +534,14 @@ function gameLoop() {
         thickness
       );
     }
+    
+    for (const b of Teleports) {
+      render.drawCircle(b.RingsColour, Math.round(b.cx), Math.round(b.cy), b.radius, 0, 360);
+      render.drawCircle(b.fillColor, Math.round(b.cx), Math.round(b.cy), b.radius-1, 0, 360);
+      render.drawCircle(b.RingsColour, Math.round(b.cx), Math.round(b.cy), b.radius-2, 0, 360);
+      render.drawCircle(b.fillColor, Math.round(b.cx), Math.round(b.cy), b.radius-3, 0, 360);
+    }
+    
   
     for (const b of PressurePlates) {
       if (b.Active){
@@ -602,38 +650,47 @@ export const GameStarter = {
       line = "B 0.94,0.30,0,0,255,0,85"; // startX, startY, vx (Technically overrridden), vy  (Technically overrridden), r,g,b  //ball
       applyLine(line);
 
-      line = "U 0.3,0.3,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Left cluster bumper
+      line = "U 0.3,0.3,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Top Left cluster bumper
       applyLine(line);
 
-      line = "U 0.5,0.25,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top Middle cluster bumper
+      line = "U 0.5,0.25,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Top Middle cluster bumper
       applyLine(line);
 
-      line = "U 0.7,0.3,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top right cluster bumper
+      line = "U 0.7,0.3,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Top right cluster bumper
       applyLine(line);
 
-      line = "U 0.4,0.45,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom Left cluster bumper
+      line = "U 0.4,0.45,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Bottom Left cluster bumper
       applyLine(line);
 
-      line = "U 0.6,0.45,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right cluster bumper
+      line = "U 0.6,0.45,8,10,0,0,170,0,170,255,6"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Bottom right cluster bumper
       applyLine(line);
 
-      line = "U 0.18,0.18,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom right hard access bumper
+      line = "U 0.18,0.18,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Bottom right hard access bumper
       applyLine(line);
 
-      line = "U 0.08,0.07,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Top left hard access bumper
+      line = "U 0.08,0.07,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Top left hard access bumper
       applyLine(line);
 
-      line = "U 0.075,0.265,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b //Bottom left hard access bumper
+      line = "U 0.075,0.265,6,40,170,0,170,255,85,255,3"; //x, y,Radius , hit score, (Centre colour) r,g,b, (Ring colour) r,g,b, Strength //Bottom left hard access bumper
       applyLine(line);
   
-      line = "Q 0.95,0.60,6,50,85,  85,  0,255, 255, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Bottom right pressure plate Yellow
+      line = "Q 0.95,0.60,6,50,85,  85,  0,255, 255, 0"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b, Strength //Bottom right pressure plate Yellow
       applyLine(line);
   
-      line = "Q 0.95,0.50,6,100,170,  0,  0,255, 0, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Middle right pressure plate Psion
+      line = "Q 0.95,0.50,6,100,170,  0,  0,255, 0, 0"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Middle right pressure plate Psion
       applyLine(line);
   
       line = "Q 0.95,0.40,6,50,85,  85,  0,255, 255, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Top right pressure plate Yellow
       applyLine(line);
+  
+      line = "T 0.08,0.17,6,0,50,85,  85,  0,255, 255, 0,1,1"; //x, y,Radius , Linked ID, (Inactive colour) r,g,b, (Active colour) r,g,b, ExitballVX, ExitballVY  //Top right pressure plate Yellow
+      applyLine(line);
+  
+  
+      line = "T 0.17, 0.40,6,0,50,85,  85,  0,255, 255, 0,0,0"; //x, y,Radius , Linked ID, (Inactive colour) r,g,b, (Active colour) r,g,b, ExitballVX, ExitballVY //Top right pressure plate Yellow
+      applyLine(line);
+       
+
   
       line = "W -0.9,0.3,0.25,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left slope Paddle //These need to come first so when it does hit collisions it does the Slope wall first
       applyLine(line);
@@ -668,7 +725,10 @@ export const GameStarter = {
 
       line = "W 0.35,0.1,0.1,0.4,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b  //Topless bunker wall left
       applyLine(line);
+  
+  
 
+  
 
       line = "D left,0.25,0.9,0.2,0.45,-0.45,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle left
       applyLine(line);
