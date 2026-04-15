@@ -14,6 +14,9 @@ let walls = [];
 let paddles = [];
 let PressurePlates = [];
 let Teleports = [];
+/*/
+let Spinneers = [];
+/*/
 let ball = null;
 
 let gameOver = false;
@@ -194,10 +197,31 @@ function applyLine(line) {
         color: render.makeColor(+v[5], +v[6], +v[7])
       };
       if (wall.behavior === 2) wall.BonkerMagnitude = +v[8];
+      if (wall.behavior === 3) wall.HitScore = +v[8];
       walls.push(wall);
       break;
     }
+  /*/   
+    case "R": {
+      console.log("R");
+      const Spinneer = {
+        x1: (+v[0] * screen.width),
+        y1: (+v[1] * screen.height),
+        x2: (+v[2] * screen.width),
+        y2: (+v[3] * screen.height),
+        color: render.makeColor(+v[4], +v[5], +v[6]),
+        Linecolor: render.makeColor(+v[7], +v[8], +v[9]),
+        ScorePerUpdate: +v[10],
+        RotationMultiplyer: +v[11],
+        Active: true,
+        Impulse: 0,
+        LineAnimate: 0
+      };
 
+      Spinneers.push(wall);
+      break;
+    }
+ /*/
     case "D": {
       console.log("D");
       const p = {
@@ -373,6 +397,38 @@ function Physics()
         return true; //so, it can recalculate the collisions with all the new movement
       }
       //console.log("walls?");
+  /*/
+  for (const Spinneer of Spinneers) {
+        const x2 = ball.x + ball.vx, y2 = ball.y + ball.vy;
+        const closest = segmentIntersection(ball.x, ball.y, x2, y2, Spinneer.x1, Spinneer.y1, Spinneer.x2, Spinneer.y2);
+          if (closest == null){
+            if (Spinneer.Active == false){
+              Spinneer.Active = true;
+            }
+          } 
+      else{
+        if (Spinneer.Active == false){
+          continue;
+        }
+              
+        
+        // Get the spinner's direction vector (normalized)
+        const sdx = Spinneer.x2 - Spinneer.x1;
+        const sdy = Spinneer.y2 - Spinneer.y1;
+        const spinnerLen = Math.sqrt(sdx * sdx + sdy * sdy);
+        const spinnerNormX = sdx / spinnerLen;
+        const spinnerNormY = sdy / spinnerLen;
+
+        const tangentialSpeed = (ball.vx * spinnerNormX + ball.vy * spinnerNormY);
+
+        Spinneer.Impulse += tangentialSpeed * Spinneer.RotationMultiplyer;
+
+        Spinneer.Active = false;
+      }
+      
+        }
+    /*/
+  
       for (const wall of walls) {
         const x2 = ball.x + ball.vx, y2 = ball.y + ball.vy;
         const closest = segmentIntersection(ball.x, ball.y, x2, y2, wall.x1, wall.y1, wall.x2, wall.y2);
@@ -402,6 +458,10 @@ function Physics()
           ball.vx += nx * wall.BonkerMagnitude;
           ball.vy += ny * wall.BonkerMagnitude;
         }
+        if (wall.behavior === 3){
+          Score += wall.HitScore
+        }
+        
         return true; //so, it can recalculate the collisions with all the new movement
       }
       //console.log("bumper?");
@@ -429,7 +489,7 @@ function Physics()
       for (const PressurePlate of PressurePlates) {
         const dx = ball.x - PressurePlate.cx, dy = ball.y - PressurePlate.cy;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const min = physBallRadius + PressurePlate.radius;
+        const min = physBallRadius + (PressurePlate.radius - 1);
 
         if (dist < min && dist > 0) {
           if (PressurePlate.Active == false){
@@ -557,7 +617,45 @@ function gameLoop() {
       render.drawCircle(b.ringColor, Math.round(b.cx), Math.round(b.cy), b.radius + 2, 0, 360);
       render.drawCircle(b.fillColor, Math.round(b.cx), Math.round(b.cy), b.radius, 0, 360);
     }
-  
+     /*/
+    for (const Spinneer of Spinneers) {
+      if (Spinneer.Impulse !== 0) {
+        Spinneer.LineAnimate += Spinneer.Impulse;
+        
+        Score += Math.abs(Spinneer.Impulse) * Spinneer.ScorePerUpdate;
+
+        if (Spinneer.LineAnimate > 13) {
+            Spinneer.LineAnimate = 13;
+            Spinneer.Impulse *= -1; 
+        } else if (Spinneer.LineAnimate < 1) {
+            Spinneer.LineAnimate = 1;
+            Spinneer.Impulse *= -1;
+        }
+
+
+        Spinneer.Impulse *= 0.95;
+        if (Math.abs(Spinneer.Impulse) < 0.01) Spinneer.Impulse = 0;
+      }
+      render.drawLine(
+        Math.round(Spinneer.x1),
+        Math.round(Spinneer.y1),
+        Math.round(Spinneer.x2),
+        Math.round(Spinneer.y2),
+        Spinneer.color,
+        Spinneer.LineAnimate
+      );
+      
+      render.drawLine(
+        Math.round(Spinneer.x1),
+        Math.round(Spinneer.y1),
+        Math.round(Spinneer.x2),
+        Math.round(Spinneer.y2),
+        Spinneer.Linecolor,
+        1
+      );
+    }
+    /*/
+    
     for (const p of paddles) {
       const tipX = p.px + Math.cos(p.angle) * p.length;
       const tipY = p.py + Math.sin(p.angle) * p.length;
@@ -683,14 +781,11 @@ export const GameStarter = {
       line = "Q 0.95,0.40,6,50,85,  85,  0,255, 255, 0,6"; //x, y,Radius , hit score, (Inactive colour) r,g,b, (Active colour) r,g,b //Top right pressure plate Yellow
       applyLine(line);
   
-      line = "T 0.08,0.17,6,0,50,85,  85,  0,255, 255, 0,1,1"; //x, y,Radius , Linked ID, (Inactive colour) r,g,b, (Active colour) r,g,b, ExitballVX, ExitballVY  //Top right pressure plate Yellow
+      line = "T 0.08,0.17,6,0,50,85,  85,  0,255, 255, 0,1,1"; //x, y,Radius , Linked ID, (fill Colour) r,g,b, (RingsColour) r,g,b, ExitballVX, ExitballVY  //Exit bunker 
       applyLine(line);
   
-  
-      line = "T 0.17, 0.40,6,0,50,85,  85,  0,255, 255, 0,0,0"; //x, y,Radius , Linked ID, (Inactive colour) r,g,b, (Active colour) r,g,b, ExitballVX, ExitballVY //Top right pressure plate Yellow
+      line = "T 0.17, 0.40,6,0,50,85,  85,  0,255, 255, 0,0,0"; //x, y,Radius , Linked ID, (fill Colour) r,g,b, (RingsColour) r,g,b, ExitballVX, ExitballVY //Entrance bunker 
       applyLine(line);
-       
-
   
       line = "W -0.9,0.3,0.25,0.9,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Left slope Paddle //These need to come first so when it does hit collisions it does the Slope wall first
       applyLine(line);
@@ -710,26 +805,26 @@ export const GameStarter = {
       line = "W 0.999,-0.2,0.999,0.758,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b //Right wall
       applyLine(line);
 
-
       line = "W 0.10,0.6,0.25,0.75,bonker,255,170,0,3";  //x1, y1, x2, y2, behavior, r,g,b //Left bonker 
       applyLine(line);
 
       line = "W 0.1,0.6,0.1,0.75,wall,255,255,255";  //x1, y1, x2, y2, behavior, r,g,b //Left bonker back
       applyLine(line);
 
-      line = "W 0.9,0.6,0.75,0.75,bonker,255,170,0,3"; //x1, y1, x2, y2, behavior, r,g,b //Right bonker 
+      line = "W 0.9,0.6,0.75,0.75,bonker,255,170,0,3"; //x1, y1, x2, y2, behavior, r,g,b, Bounceback strength //Right bonker 
       applyLine(line);
 
       line = "W 0.9,0.13,0.9,0.80,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b  //Right ball shoot /Right bonker back
       applyLine(line);
 
-      line = "W 0.35,0.1,0.1,0.4,wall,255,255,255"; //x1, y1, x2, y2, behavior, r,g,b  //Topless bunker wall left
+      line = "W 0.35,0.1,0.1,0.4,wall,255,255,255"; //x1, y1, x2, y2, behavior  (1 = wall, 2 = bonker, 3 = Score wall), r,g,b  //Topless bunker wall left
       applyLine(line);
-  
-  
 
+      /*/ 
+      line = "R 0.4,0.4,0.5,0.5,255,255,255,0,0,0,1,1"; //x1, y1, x2, y2,  (Mainline) r,g,b, (Through line), r,g,b,Score per update of rotating, Rotation multiplier //Topless bunker wall left
+      applyLine(line);
+      /*/
   
-
       line = "D left,0.25,0.9,0.2,0.45,-0.45,0.3,0,255,0"; //side, pivotX, pivotY:, length:, restAngle:, activeAngle:, angularSpeed,  r,g,b //Paddle left
       applyLine(line);
 
